@@ -1,0 +1,7 @@
+{
+  "name": "quiz-api",
+  "type": "module",
+  "dependencies": {
+    "googleapis": "^121.0.0"
+  }
+}
