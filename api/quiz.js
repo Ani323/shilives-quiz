@@ -1,4 +1,3 @@
-// api/quiz.js
 import { google } from 'googleapis';
 
 const SHEET_ID = '190iyPrli-xf5NNgq6E4HLV7hXsxGuJg3fD2gskelbAE';
@@ -17,6 +16,16 @@ const GOOGLE_SERVICE_ACCOUNT = {
 };
 
 export default async function handler(req, res) {
+  // CORS headers
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Only POST allowed' });
   }
@@ -25,16 +34,16 @@ export default async function handler(req, res) {
   const timestamp = new Date().toISOString();
 
   try {
-    // 1. Authorize
+    // Auth
     const auth = new google.auth.GoogleAuth({
       credentials: GOOGLE_SERVICE_ACCOUNT,
       scopes: ['https://www.googleapis.com/auth/spreadsheets']
     });
 
-    // 2. Append answers to Sheet
     const sheets = google.sheets({ version: 'v4', auth });
     const values = [timestamp, ...Object.values(answers)];
 
+    // Append to Sheet
     await sheets.spreadsheets.values.append({
       spreadsheetId: SHEET_ID,
       range: 'Sheet1',
@@ -44,11 +53,10 @@ export default async function handler(req, res) {
       }
     });
 
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.status(200).json({ success: true, message: 'Answers stored successfully' });
+    return res.status(200).json({ success: true, message: 'Answers stored successfully' });
+
   } catch (error) {
     console.error('Sheet write error:', error);
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.status(500).json({ error: 'Sheet write failed', detail: error.message });
+    return res.status(500).json({ error: 'Sheet write failed', detail: error.message });
   }
 }
