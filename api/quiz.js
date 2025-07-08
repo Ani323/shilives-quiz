@@ -2,18 +2,18 @@
 import { google } from 'googleapis';
 
 const SHEET_ID = '190iyPrli-xf5NNgq6E4HLV7hXsxGuJg3fD2gskelbAE';
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
 const GOOGLE_SERVICE_ACCOUNT = {
   type: "service_account",
-  project_id: "XXXX",
-  private_key_id: "XXXX",
+  project_id: process.env.GOOGLE_PROJECT_ID,
+  private_key_id: process.env.GOOGLE_PRIVATE_KEY_ID,
   private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-  client_email: "xxxx@xxxx.iam.gserviceaccount.com",
-  client_id: "XXXX",
+  client_email: process.env.GOOGLE_CLIENT_EMAIL,
+  client_id: process.env.GOOGLE_CLIENT_ID,
   auth_uri: "https://accounts.google.com/o/oauth2/auth",
   token_uri: "https://oauth2.googleapis.com/token",
   auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
-  client_x509_cert_url: "https://www.googleapis.com/robot/v1/metadata/x509/xxxx"
+  client_x509_cert_url: process.env.GOOGLE_CLIENT_CERT_URL
 };
 
 export default async function handler(req, res) {
@@ -25,12 +25,13 @@ export default async function handler(req, res) {
   const timestamp = new Date().toISOString();
 
   try {
-    // Step 1: Write to Google Sheet
+    // 1. Authorize
     const auth = new google.auth.GoogleAuth({
       credentials: GOOGLE_SERVICE_ACCOUNT,
       scopes: ['https://www.googleapis.com/auth/spreadsheets']
     });
 
+    // 2. Append answers to Sheet
     const sheets = google.sheets({ version: 'v4', auth });
     const values = [timestamp, ...Object.values(answers)];
 
@@ -43,42 +44,11 @@ export default async function handler(req, res) {
       }
     });
 
-    // Step 2: Generate GPT Scorecard
-    const prompt = `
-You are a holistic wellness expert. A user submitted the following responses:\n\n${JSON.stringify(answers, null, 2)}\n\n
-Based on this, write a scorecard with:
-- 3 scores (mental, physical, overall wellness)
-- A root cause insight
-- 3 product suggestions
-- 1 affirmation
-
-Return ONLY JSON with keys: physical_score, mental_score, wellness_score, insight, products, affirmation.
-    `.trim();
-
-    const gptResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: 'You are a helpful wellness coach.' },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.6
-      })
-    });
-
-    const result = await gptResponse.json();
-    const parsed = result.choices?.[0]?.message?.content?.trim();
-
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.status(200).json(JSON.parse(parsed));
+    res.status(200).json({ success: true, message: 'Answers stored successfully' });
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Sheet write error:', error);
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.status(500).json({ error: 'Server error', detail: error.message });
+    res.status(500).json({ error: 'Sheet write failed', detail: error.message });
   }
 }
