@@ -21,29 +21,39 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  // Handle preflight
+  // Handle preflight request
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
   }
 
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Only POST allowed' });
+    return res.status(405).json({ error: 'Only POST method is allowed' });
   }
 
   const answers = req.body.answers || {};
   const timestamp = new Date().toISOString();
 
   try {
-    // Auth
+    // Authenticate with Google Sheets
     const auth = new google.auth.GoogleAuth({
       credentials: GOOGLE_SERVICE_ACCOUNT,
       scopes: ['https://www.googleapis.com/auth/spreadsheets']
     });
 
     const sheets = google.sheets({ version: 'v4', auth });
-    const values = [timestamp, ...Object.values(answers)];
 
-    // Append to Sheet
+    // Ensure correct column order
+    const values = [
+      timestamp,
+      answers.name || '',
+      answers.email || '',
+      answers.age || '',
+      answers.season || '',
+      answers.concern || '',
+      '' // Placeholder for GPT scorecard
+    ];
+
+    // Append data to Sheet
     await sheets.spreadsheets.values.append({
       spreadsheetId: SHEET_ID,
       range: 'Sheet1',
