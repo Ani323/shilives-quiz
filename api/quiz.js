@@ -1,6 +1,6 @@
 import { google } from 'googleapis';
 
-const SHEET_ID = '190iyPrli-xf5NNgq6E4HLV7hXsxGuJg3fD2gskelbAE';
+const SHEET_ID = '1gruGzYgVrU_A0ElW6WwRjxrDaUjoD9QKu3DLaIUUnRu';
 
 const GOOGLE_SERVICE_ACCOUNT = {
   type: "service_account",
@@ -16,7 +16,7 @@ const GOOGLE_SERVICE_ACCOUNT = {
 };
 
 export default async function handler(req, res) {
-  // ✅ Handle CORS preflight
+  // ✅ CORS preflight handler
   if (req.method === 'OPTIONS') {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -24,12 +24,11 @@ export default async function handler(req, res) {
     return res.status(204).end();
   }
 
-  // ✅ Set CORS for actual requests
+  // ✅ CORS for POST
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  // ❌ Block other methods
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Only POST method is allowed' });
   }
@@ -38,7 +37,7 @@ export default async function handler(req, res) {
   const timestamp = new Date().toISOString();
 
   try {
-    // ✅ Auth with Google Sheets
+    // ✅ Authenticate with Google Sheets
     const auth = new google.auth.GoogleAuth({
       credentials: GOOGLE_SERVICE_ACCOUNT,
       scopes: ['https://www.googleapis.com/auth/spreadsheets']
@@ -46,7 +45,7 @@ export default async function handler(req, res) {
 
     const sheets = google.sheets({ version: 'v4', auth });
 
-    // ✅ Map to correct column order
+    // ✅ Map fields in correct column order — fill empty if not present
     const values = [
       timestamp,
       answers.name || '',
@@ -54,13 +53,13 @@ export default async function handler(req, res) {
       answers.age || '',
       answers.season || '',
       answers.concern || '',
-      '' // GPT scorecard column (blank for now)
+      '' // GPT scorecard placeholder
     ];
 
-    // ✅ Append to sheet
+    // ✅ Append row to Sheet
     await sheets.spreadsheets.values.append({
       spreadsheetId: SHEET_ID,
-      range: 'Sheet1',
+      range: 'Shilives-Quiz',
       valueInputOption: 'RAW',
       requestBody: {
         values: [values]
