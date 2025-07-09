@@ -16,16 +16,20 @@ const GOOGLE_SERVICE_ACCOUNT = {
 };
 
 export default async function handler(req, res) {
-  // CORS headers
+  // ✅ Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    return res.status(204).end();
+  }
+
+  // ✅ Set CORS for actual requests
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  // Handle preflight request
-  if (req.method === 'OPTIONS') {
-    return res.status(204).end();
-  }
-
+  // ❌ Block other methods
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Only POST method is allowed' });
   }
@@ -34,7 +38,7 @@ export default async function handler(req, res) {
   const timestamp = new Date().toISOString();
 
   try {
-    // Authenticate with Google Sheets
+    // ✅ Auth with Google Sheets
     const auth = new google.auth.GoogleAuth({
       credentials: GOOGLE_SERVICE_ACCOUNT,
       scopes: ['https://www.googleapis.com/auth/spreadsheets']
@@ -42,7 +46,7 @@ export default async function handler(req, res) {
 
     const sheets = google.sheets({ version: 'v4', auth });
 
-    // Ensure correct column order
+    // ✅ Map to correct column order
     const values = [
       timestamp,
       answers.name || '',
@@ -50,10 +54,10 @@ export default async function handler(req, res) {
       answers.age || '',
       answers.season || '',
       answers.concern || '',
-      '' // Placeholder for GPT scorecard
+      '' // GPT scorecard column (blank for now)
     ];
 
-    // Append data to Sheet
+    // ✅ Append to sheet
     await sheets.spreadsheets.values.append({
       spreadsheetId: SHEET_ID,
       range: 'Sheet1',
